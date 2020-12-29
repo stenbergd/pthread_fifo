@@ -70,7 +70,6 @@ out:
 int pthread_fifo_enqueue(struct pthread_fifo *queue, uint8_t *item)
 {
 	int status = 0;
-	unsigned int temp_idx;
 
 	if (NULL == queue || NULL == item) {
 		status = EINVAL;
@@ -82,18 +81,12 @@ int pthread_fifo_enqueue(struct pthread_fifo *queue, uint8_t *item)
 		goto out;
 	}
 
-	temp_idx = queue->back + 1;
-
 	if (queue->buf_max_item_len == queue->buf_item_len) {
 		status = ENOMEM;
 		goto out;
 	}
 
-	if (queue->buf_max_item_len == temp_idx) {
-		temp_idx = 0; // Buffer wrap-around
-	}
-
-	queue->back = temp_idx;
+	queue->back = (queue->back + 1) % queue->buf_max_item_len;
 	queue->buf_item_len++;
 
 	memcpy(&queue->buffer[queue->item_size*queue->back], item, queue->item_size);
@@ -116,7 +109,6 @@ out:
 int pthread_fifo_dequeue(struct pthread_fifo *queue, uint8_t *item, const struct timespec *timeout)
 {
 	int status = 0;
-	unsigned int temp_idx;
 	struct timespec abstimeout;
 
 	if (NULL == queue || NULL == item) {
@@ -161,13 +153,7 @@ int pthread_fifo_dequeue(struct pthread_fifo *queue, uint8_t *item, const struct
 
 	memcpy(item, &queue->buffer[queue->item_size*queue->front], queue->item_size);
 
-	temp_idx = queue->front + 1;
-
-	if (queue->buf_max_item_len == temp_idx) {
-		temp_idx = 0; // Buffer wrap-around
-	}
-
-	queue->front = temp_idx;
+	queue->front = (queue->front + 1) % queue->buf_max_item_len;
 	queue->buf_item_len--;
 
 out:

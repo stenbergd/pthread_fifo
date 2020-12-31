@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 /* Private defines ------------------------------------------*/
-#define QUEUE_LEN	10
+#define QUEUE_LEN	5
 
 void *producer(void *arg)
 {

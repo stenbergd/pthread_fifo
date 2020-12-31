@@ -22,11 +22,11 @@
  * @param item_size : Size of each FIFO queue item
  * @retval	0 if OK, else error
  */
-int pthread_fifo_create(struct pthread_fifo *queue, size_t queue_len, size_t item_size)
+int pthread_fifo_create(struct pthread_fifo *queue, size_t max_nbr_items, size_t item_size)
 {
 	int status = 1;
 
-	if (NULL == queue || 0 >= queue_len || 0 >= item_size) {
+	if (NULL == queue || 0 >= max_nbr_items || 0 >= item_size) {
 		status = EINVAL;
 		goto out;
 	}
@@ -43,16 +43,15 @@ int pthread_fifo_create(struct pthread_fifo *queue, size_t queue_len, size_t ite
 		goto out;
 	}
 
-	queue->buffer = malloc(item_size*queue_len);
+	queue->buffer = malloc(item_size * max_nbr_items);
 	if (0 != status) {
 		goto out;
 	}
 
-	queue->buf_item_len = 0;
 	queue->front = 0;
-	queue->back = -1;
+	queue->back = 0;
 
-	queue->buf_max_item_len = queue_len;
+	queue->max_nbr_items = max_nbr_items;
 	queue->item_size = item_size;
 
 	status = 0;
@@ -81,15 +80,14 @@ int pthread_fifo_enqueue(struct pthread_fifo *queue, uint8_t *item)
 		goto out;
 	}
 
-	if (queue->buf_max_item_len == queue->buf_item_len) {
+	if (((queue->back + 1) % queue->max_nbr_items) == queue->front) {
 		status = ENOMEM;
 		goto out;
 	}
 
-	queue->back = (queue->back + 1) % queue->buf_max_item_len;
-	queue->buf_item_len++;
-
 	memcpy(&queue->buffer[queue->item_size*queue->back], item, queue->item_size);
+
+	queue->back = (queue->back + 1) % queue->max_nbr_items;
 
 	status = sem_post(&queue->sem);
 
@@ -153,8 +151,7 @@ int pthread_fifo_dequeue(struct pthread_fifo *queue, uint8_t *item, const struct
 
 	memcpy(item, &queue->buffer[queue->item_size*queue->front], queue->item_size);
 
-	queue->front = (queue->front + 1) % queue->buf_max_item_len;
-	queue->buf_item_len--;
+	queue->front = (queue->front + 1) % queue->max_nbr_items;
 
 out:
 	pthread_mutex_unlock(&queue->mutex);
@@ -163,7 +160,7 @@ out:
 }
 
 /**
- * @brief	Frees up queue's allocated memory and destroys associated mutex and semaphore
+ * @brief	Frees up FIFO queue allocated memory and destroys associated mutex and semaphore
  * @param queue : Pointer to FIFO queue definition
  * @retval	0 if OK, else error
  */
@@ -186,7 +183,7 @@ int pthread_fifo_destroy(struct pthread_fifo *queue)
 
 	pthread_mutex_destroy(&queue->mutex);
 
-	sem_destroy(&queue->sem); // TODO check return value
+	sem_destroy(&queue->sem);
 
 out:
 	return status;

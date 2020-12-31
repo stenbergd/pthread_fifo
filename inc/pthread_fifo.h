@@ -16,18 +16,17 @@ typedef struct pthread_fifo
 {
 	pthread_mutex_t mutex; // Internal mutex
 	sem_t sem; // Internal semaphore
-	uint8_t *buffer; // Internal pointer to allocated queue item data
-	unsigned int front; // Index to first inserted item in data
-	unsigned int back; // Index to last inserted item in data
-	size_t buf_item_len; // Buffer length in number of items
-	size_t buf_max_item_len; // Maximum buffer length in number of items
+	uint8_t *buffer; // Internal pointer to allocated queue item data buffer
+	unsigned int front; // Index to first inserted item data in buffer
+	unsigned int back; // Index to next buffer place to insert new item data
+	size_t max_nbr_items; // Maximum number of items in buffer
 	size_t item_size; // Size of each item in queue
 } pthread_fifo_t;
 
 /* Exported function prototypes -----------------------------*/
-int pthread_fifo_create(pthread_fifo_t *queue, size_t queue_size, size_t msg_size);
-int pthread_fifo_enqueue(pthread_fifo_t *queue, uint8_t *data);
-int pthread_fifo_dequeue(pthread_fifo_t *queue, uint8_t *data, const struct timespec *timeout);
+int pthread_fifo_create(pthread_fifo_t *queue, size_t max_nbr_items, size_t item_size);
+int pthread_fifo_enqueue(pthread_fifo_t *queue, uint8_t *item);
+int pthread_fifo_dequeue(pthread_fifo_t *queue, uint8_t *item, const struct timespec *timeout);
 int pthread_fifo_destroy(pthread_fifo_t *queue);
 
 #endif // _PTHREAD_FIFO_H_
